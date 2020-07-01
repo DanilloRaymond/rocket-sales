@@ -15,5 +15,6 @@ app.use(express.json());
 app.use('/user', require('./routes/userRoute'));
 app.use('/dealer', require('./routes/dealerRoute'));
 app.use('/faturamento', require('./routes/faturamentoRoute'));
+app.use('/showroom', require('./routes/showroomRoute'));
 
 module.exports = app;

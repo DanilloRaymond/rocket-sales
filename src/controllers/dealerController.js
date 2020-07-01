@@ -47,9 +47,11 @@ exports.create = async (req, res) => {
       });
     }
 
+
     try {
       const connection2 = await mysql.createConnection(dbConfig);
-      const [result2] = await connection2.query('INSERT INTO dealer SET ?', dealer);
+      // todo: alterar esse insert. nomear os campos.
+      const [result2] = await connection2.query('INSERT INTO dealer (nome, fabricante, plano, contaFaturamento) values (?,?,?,?)', [dealer.nome,dealer.fabricante,dealer.plano,dealer.contaFaturamento]);
       await connection2.end();
 
       const connection3 = await mysql.createConnection(dbConfig);
@@ -63,12 +65,23 @@ exports.create = async (req, res) => {
       );
       await connection3.end();
 
+      //PEGANDO AS ROTAS DO PLANO SELECIONADO PELO CLIENTE
+      const connection4 = await mysql.createConnection(dbConfig);
+      const [rows4] = await connection4.query(
+        'SELECT rotas FROM  sistemasrotas WHERE (plano <= ?)',[dealer.plano]
+      );
+      await connection4.end();
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Dealer incluído com sucesso.',
         dealer: result2.insertId,
+        getRotas:rows4,
+        permissao:4,
+        nomeEmpresa:dealer.nome
       });
     } catch (err) {
+      console.log(err)
       return res.status(400).send({
         status: 'erro',
         mensagem: 'Ocorreu um erro ao inserir o dealer.',
@@ -82,6 +95,7 @@ exports.create = async (req, res) => {
   }
 };
 
+//PEGANDO TODOS OS DEALERS CADASTRADOS PELO USUÁRIO
 exports.getAll = async (req, res) => {
   try {
     const connection = await mysql.createConnection(dbConfig);
@@ -105,6 +119,7 @@ exports.getAll = async (req, res) => {
   }
 };
 
+//DEFININDO A EMPRESA PRINCIPAL DO USUÁRIO
 exports.principal = async (req, res) => {
   try {
     const { dealer } = req.body;
@@ -125,11 +140,35 @@ exports.principal = async (req, res) => {
       );
       await connection3.end();
 
+      const connection4 = await mysql.createConnection(dbConfig);
+      const [rows4] = await connection4.query(
+        'SELECT plano,nome FROM`rocket-sales`.dealer WHERE (id  = ?)',dealer
+      );
+      await connection4.end();
+
+      const connection5 = await mysql.createConnection(dbConfig);
+      const [rows5] = await connection5.query(
+        'SELECT rotas FROM `rocket-sales`. sistemasrotas WHERE (plano <= ?)',rows4[0].plano
+      );
+      await connection5.end();
+
+      const connection6 = await mysql.createConnection(dbConfig);
+      const [rows6] = await connection6.query(
+        'SELECT permissao FROM `rocket-sales`.dealerusers WHERE (user = ?) And (dealer = ?)',[req.userId,dealer]
+      );
+      await connection6.end();
+
       return res.status(200).send({
         status: 'ok',
         mensagem: 'Dealer principal definido.',
+        getRotas:rows5,
+        plano:rows4[0].plano,
+        nomeEmpresa:rows4[0].nome,
+        permissao:rows6.length > 0 ? rows6[0].permissao : 0,
       });
+
     } catch (err) {
+      console.log(err)
       return res.status(400).send({
         status: 'erro',
         mensagem: 'Ocorreu um erro ao inserir o dealer.',
@@ -191,6 +230,76 @@ exports.convidar = async (req, res) => {
     return res.status(400).send({
       status: 'erro',
       mensagem: 'Ocorreu um erro ao convidar o usuário.',
+    });
+  }
+};
+
+//* Modulos liberados para o dealer
+exports.PlansBycompany = async (req, res) => {
+  const dealer = req.query.dealer;
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [modulos] = await connection.query(
+      'SELECT DISTINCT modulo,rotas, sistemasrotas.id FROM `rocket-sales`.dealer INNER JOIN `rocket-sales`. sistemasrotas ON `rocket-sales`.dealer.plano >= `rocket-sales`. sistemasrotas.plano WHERE (dealer.id = ?) AND (modulo <> "painel")',
+      [dealer]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      modulos:modulos
+    });
+  } catch (err) {
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro.',
+    });
+  }
+};
+
+
+//* Todas Contas de faturamentos cadastrada pelo o Usuário
+exports.UserbillingAccounts = async (req, res) => {
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [contas] = await connection.query(
+      'SELECT cnpj,id,razaoSocial FROM faturamento WHERE (user = ?)',
+      [req.userId]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      contas:contas
+    });
+  } catch (err) {
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro.',
+    });
+  }
+};
+
+//* Todas as funcionalidades do Modulo
+exports.configurationModulosMenus = async (req, res) => {
+  const codModulo = req.query.codModulo
+  const permissao = req.query.permissao
+  try {
+    const connection = await mysql.createConnection(dbConfig);
+    const [menus] = await connection.query(
+      'SELECT icon,permissao,menu,grupoMenu,CONCAT("/", sistemasrotas.rotas,menumodulos.link) AS link FROM `rocket-sales`.menumodulos INNER JOIN `rocket-sales`. sistemasrotas ON `rocket-sales`.menumodulos.codModulo = `rocket-sales`. sistemasrotas.id WHERE (codModulo = ?) AND (permissao <= ?)',
+      [codModulo,permissao]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      menus:menus
+    });
+  } catch (err) {
+    return res.status(400).send({
+      status: 'erro',
+      mensagem: 'Ocorreu um erro.',
     });
   }
 };
