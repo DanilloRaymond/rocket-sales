@@ -348,7 +348,7 @@ exports.registraTestDrive = async (req, res) => {
     const [
       rows,
     ] = await connection.query(
-      'UPDATE leads SET testDriveHora = ?, testdrive = 1 WHERE id = ? dealer = ?;',
+      'UPDATE leads SET testDriveHora = ?, testdrive = 1 WHERE id = ? AND dealer = ?;',
       [testDriveHora1, lead, dealer]
     );
     await connection.end();
@@ -383,7 +383,7 @@ exports.registraNegativaTestDrive = async (req, res) => {
     const [
       rows,
     ] = await connection.query(
-      'UPDATE leads SET testDriveMotivo = ?, testdrive = 0 WHERE id = ? and dealer = ?;',
+      'UPDATE leads SET testDriveMotivo = ?, testdrive = 0 ,testDriveHora = null WHERE id = ? and dealer = ?;',
       [testDriveMotivo, lead, dealer]
     );
     await connection.end();
@@ -438,7 +438,7 @@ exports.listar = async (req, res) => {
     }
 
     let SQLnaLoja = '';
-    if (naLoja === true) {
+    if (naLoja === 'true') {
       SQLnaLoja = ' AND horaSaida is null';
     }
 
@@ -446,7 +446,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT nome, vendedor, veiculoInteresse, horaEntrada, horaSaida FROM leads WHERE dealer = ? and horaEntrada BETWEEN ? AND ? ${SQLnaLoja}`,
+      `SELECT  leads.id, leads.nome, user.nome as vendedor, veiculoInteresse, DATE_FORMAT(horaEntrada, "%d/%m/%Y %H:%i:%s") as horaEntrada, DATE_FORMAT(horaSaida, "%d/%m/%Y %H:%i:%s") as horaSaida FROM leads INNER JOIN 	user ON leads.vendedor = user.id  WHERE dealer = ? and horaEntrada BETWEEN ? AND ? ${SQLnaLoja}`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
@@ -520,6 +520,44 @@ exports.alterarStatus = async (req, res) => {
       status: 'erro',
       tipo: 'Erro de Servidor',
       mensagem: 'Erro ao atualizar cliente.',
+    });
+  }
+};
+
+exports.selecionarLead = async (req, res) => {
+  try {
+    const {dealer,lead} = req.body;
+
+    if (
+      dealer === undefined ||
+      lead === undefined
+    ) {
+      return res.status(400).send({
+        status: 'erro',
+        tipo: 'Falha na Chamada',
+        mensagem: 'Requisição inválida.',
+      });
+    }
+
+
+    const connection = await mysql.createConnection(dbConfig);
+    const [
+      dadoslead,
+    ] = await connection.query(
+      'SELECT  leads.nome,  cpf, leads.dataNascimento, leads.telefone1, leads.telefone2, leads.email, veiculoInteresse, user.id as vendedor,  leads.comoconheceu, leads.observacao, leads.horaEntrada FROM leads INNER JOIN user ON user.id = leads.vendedor WHERE leads.dealer = ? And leads.id = ? ',[dealer,lead]
+    );
+    await connection.end();
+
+    return res.status(200).send({
+      status: 'ok',
+      dadoslead,
+    });
+  } catch (err) {
+    tratamentoErros(req, res, err);
+    return res.status(400).send({
+      status: 'erro',
+      tipo: 'Erro de Servidor',
+      mensagem: 'Erro ao obter ao lead.',
     });
   }
 };
