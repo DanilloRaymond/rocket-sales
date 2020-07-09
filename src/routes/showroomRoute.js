@@ -12,5 +12,6 @@ router.post('/registraNegativaTestDrive', auth, authDealer, controller.registraN
 router.get('/listar', auth, authDealer, controller.listar);
 router.post('/alterarStatus', auth, authDealer, controller.alterarStatus);
 router.get('/selecionarLead', auth, authDealer, controller.selecionarLead);
+router.get('/loglead', auth, authDealer, controller.loglead);
 
 module.exports = router;
