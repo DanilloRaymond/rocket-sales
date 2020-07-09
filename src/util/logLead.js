@@ -8,13 +8,13 @@ const dbConfig = {
   database: process.env.DB_NAME,
 };
 
-const logLead = async function logLead(acao,userId,dealer,lead) {
+const logLead = async function logLead(acao,userId,dealer,lead,observacao) {
   try {
     const connection = await mysql.createConnection(dbConfig);
     const [
       rows,
     ] = await connection.query(
-      'INSERT INTO `rocket-sales`.`logleads` (`acao`, `user`, `dealer`, `lead`) VALUES (?,?,?,?)',[acao,userId,dealer,lead]
+      'INSERT INTO `rocket-sales`.`logleads` (`acao`, `user`, `dealer`, `lead`, `observacao`) VALUES (?,?,?,?,?)',[acao,userId,dealer,lead,observacao]
     );
     await connection.end();
     return //console.log("Log inserido com sucesso!");

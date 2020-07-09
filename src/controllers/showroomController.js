@@ -5,6 +5,14 @@ const cpfValidator = require('cpf');
 const tratamentoErros = require('../util/tratamentoErros');
 const logLead = require('../util/logLead');
 
+// FUNCAO logLead
+//***PARAMETROS*/
+//* ACAO == Mensagens qual ação foi realizada no lead
+//* userId ==  Codigo do usuário responsavel pela ação
+//* dealer == Codigo do dealer responsavel pela ação
+//* lead ==  Codigo do lead
+//* observacao  == Motivos (PODE SER NULL)
+
 const dbConfig = {
   host: process.env.DB_HOST,
   user: process.env.DB_USER,
@@ -121,7 +129,7 @@ exports.cadastro = async (req, res) => {
       ]
     );
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Cliente inserido",req.userId,dealer,result.insertId)
+    logLead("Cliente inserido",req.userId,dealer,result.insertId,null)
     await connection.end();
     return res.status(200).send({
       status: 'ok',
@@ -262,7 +270,7 @@ exports.atualizar = async (req, res) => {
     );
     await connection.end();
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Cliente atualizado",req.userId,dealer,lead)
+    logLead("Cliente atualizado",req.userId,dealer,lead,null)
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Cliente atualizado com sucesso!',
@@ -308,7 +316,7 @@ exports.registraSaida = async (req, res) => {
     ]);
     await connection.end();
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Saída registrada",req.userId,dealer,lead)
+    logLead("Saída registrada",req.userId,dealer,lead,null)
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Cliente atualizado com sucesso!',
@@ -355,7 +363,7 @@ exports.registraTestDrive = async (req, res) => {
     );
     await connection.end();
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Test Drive realizado",req.userId,dealer,lead)
+    logLead("Test Drive realizado",req.userId,dealer,lead,null)
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Test Drive registrado com sucesso!',
@@ -391,7 +399,7 @@ exports.registraNegativaTestDrive = async (req, res) => {
     );
     await connection.end();
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Test Drive não realizado",req.userId,dealer,lead)
+    logLead("Test Drive não realizado",req.userId,dealer,lead,testDriveMotivo)
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Informações do Test Drive registrado com sucesso!',
@@ -514,7 +522,7 @@ exports.alterarStatus = async (req, res) => {
     );
     await connection.end();
     //* VAI SALVAR O LOG DO LEAD
-    logLead("Status Lead foi alterado para ("+status+").",req.userId,dealer,lead)
+    logLead("Status Lead foi alterado para ("+status+").",req.userId,dealer,lead,motivoDesistencia)
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Cliente atualizado com sucesso!',
@@ -586,7 +594,7 @@ exports.loglead = async (req, res) => {
     const [
       logLeads,
     ] = await connection.query(
-      'SELECT acao, user.nome as criadopor, DATE_FORMAT(logleads.createdAt, "%d/%m/%Y %H:%i:%s") as criadoem FROM `rocket-sales`.logleads INNER JOIN user ON logleads.user = user.id WHERE (logleads.lead = ?) AND (logleads.dealer = ?) ORDER BY logleads.createdAt DESC',[lead,dealer]
+      'SELECT acao, user.nome as criadopor, DATE_FORMAT(logleads.createdAt, "%d/%m/%Y %H:%i:%s") as criadoem,observacao FROM `rocket-sales`.logleads INNER JOIN user ON logleads.user = user.id WHERE (logleads.lead = ?) AND (logleads.dealer = ?) ORDER BY logleads.createdAt DESC',[lead,dealer]
     );
     await connection.end();
 
