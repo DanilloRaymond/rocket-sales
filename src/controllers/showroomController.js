@@ -139,6 +139,7 @@ exports.cadastro = async (req, res) => {
     return res.status(200).send({
       status: 'ok',
       mensagem: 'Cliente cadastrado com sucesso!',
+      lead:result.insertId,
     });
   } catch (err) {
     tratamentoErros(req, res, err);
@@ -238,14 +239,6 @@ exports.atualizar = async (req, res) => {
         status: 'erro',
         tipo: 'Validação',
         mensagem: 'O veículo de interesse não foi informado.',
-      });
-    }
-
-    if (!vendedor.trim()) {
-      return res.status(400).send({
-        status: 'erro',
-        tipo: 'Validação',
-        mensagem: 'O vendedor não foi informado.',
       });
     }
 
@@ -415,13 +408,11 @@ exports.registraNegativaTestDrive = async (req, res) => {
 
 exports.listar = async (req, res) => {
   try {
-    const { dealer, dataInicial, dataFinal, naLoja, vendedores, origens, status } = req.body;
-
+    const { dealer, dataInicial, dataFinal, vendedores, origens, status } = req.body;
     if (
       dealer === undefined ||
       dataInicial === undefined ||
       dataFinal === undefined ||
-      naLoja === undefined ||
       vendedores === undefined ||
       origens === undefined ||
       status === undefined
@@ -451,11 +442,6 @@ exports.listar = async (req, res) => {
       });
     }
 
-    let SQLnaLoja = '';
-    if (naLoja === 'true') {
-      SQLnaLoja = ' AND horaSaida is null';
-    }
-
     let SQLvendedor = '';
     if (vendedores !== '') {
       SQLvendedor = ` and vendedor in (${vendedores}) `;
@@ -475,7 +461,7 @@ exports.listar = async (req, res) => {
     const [
       leads,
     ] = await connection.query(
-      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLnaLoja} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
+      `SELECT leads.id, origem, leads.nome, user.nome as vendedor, veiculoInteresse, DateTimeFormatPtBr(horaEntrada) as horaEntrada, DateFormatPtBr(horaEntrada) as dataEntrada, DateTimeFormatPtBr(horaSaida) as horaSaida, statusnegociacao, numeropedido, motivodesistencia, testdrive, testdrivemotivo, testdrivehora, DateTimeFormatPtBr(agendamentoContato) agendamentoContato, IF(agendamentoContato < NOW(), IF(agendamentoContato < DATE_ADD(NOW(), INTERVAL - 2 HOUR), 'Ação Pendente Atrasada', 'Ação Pendente'), '') acao FROM leads LEFT JOIN user ON leads.vendedor = user.id WHERE dealer = ? and DATE(horaEntrada) BETWEEN ? AND ? ${SQLstatus} ${SQLvendedor} ${SQLorigem} ORDER BY CASE WHEN statusnegociacao = 'novo' THEN 5 WHEN statusnegociacao in ('sucesso', 'insucesso') THEN 0 ELSE 2 END DESC, agendamentoContato`,
       [dealer, dataInicial1, dataFinal1]
     );
     await connection.end();
